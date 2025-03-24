@@ -2,7 +2,6 @@
 Документация для работ по Web-Программированию 2025-2025
 
 # Lab 3
-<details>
   # Лабораторная №3
 ## Библиотека
 ### Модели
@@ -270,5 +269,3 @@ class RecentlyBookDateSerializer(serializers.ModelSerializer):
         fields = ["reader"]
 
 ```
-
-</details>

@@ -693,7 +693,7 @@ class ConferenceDetailView(FormMixin, generic.DetailView):
 ## Выполнил: Залетов Артём Дмитриевич, группа К3339
 ## Вариант №2 библиотека
 ### Модели
-
+```
 class User(AbstractUser):
     tel = models.CharField(verbose_name='Телефон', max_length=15, null=True, blank=True)
 

@@ -957,3 +957,1031 @@ class RecentlyBookDateSerializer(serializers.ModelSerializer):
         fields = ["reader"]
 
 ```
+# Lab 4
+# Лабораторная работа #4
+## Выполнил: Залетов Артём Дмитриевич, группа К3339
+### Routers
+```
+import Vue from 'vue';
+import VueRouter from 'vue-router';
+
+
+import SignIn from '../views/reader/SignIn.vue'
+import SignUp from '../views/reader/SignUp.vue'
+import Home from '../views/Home.vue'
+import Profile from '../views/reader/Profile.vue'
+import ProfileEdit from '../views/reader/ProfileEdit.vue'
+import LogOut from '../views/reader/LogOut.vue'
+import ParticipationView from "@/components/ParticipationView.vue";
+import ParticipantsView from "@/components/ParticipantsView.vue";
+import DogRegister from "@/views/reader/DogRegister.vue"
+import DogGrade from "@/views/reader/DogGrade.vue"
+import DogEdit from "@/views/reader/DogEdit.vue"
+import ParticipationEdit from "@/views/reader/ParticipationEdit.vue";
+
+Vue.use(VueRouter)
+
+const routes = [
+  {
+    path: '/',
+    name: 'home',
+    component: Home
+  },
+  {
+    path: '/show/signup',
+    name: 'signup',
+    component: SignUp
+  },
+  {
+    path: '/show/logout',
+    name: 'logout',
+    component: LogOut
+  },
+  {
+    path: '/show/signin',
+    name: 'signin',
+    component: SignIn
+  },
+  {
+    path: '/show/profile',
+    name: 'profile',
+    component: Profile
+  },
+  {
+    path: '/show/profile/edit',
+    name: 'profile_edit',
+    component: ProfileEdit
+  },
+  {
+    path: '/participants/DogEdit/:dogId',
+    name: 'Dog_edit',
+    component: DogEdit,
+    props: true
+  },
+  {
+    path: '/participation/ParticipationEdit/:dogId',
+    name: 'Participation_Edit',
+    component: ParticipationEdit,
+    props: true
+  },
+  {
+    path: '/about',
+    name: 'about',
+    component: () => import('../views/AboutView.vue')
+  },
+  {
+    path: '/participation',
+    component: ParticipationView
+  },
+  {
+    path: '/participants',
+    component: ParticipantsView
+  },
+
+  {
+    path: '/show/profile/regdog',
+    name: 'regdog',
+    component: DogRegister
+  },
+  {
+    path: '/show/profile/grading',
+    name: 'grading',
+    component: DogGrade
+  }
+
+]
+
+const router = new VueRouter({
+  mode: 'history',
+  base: process.env.BASE_URL,
+  routes
+})
+
+export default router
+```
+### Главная страница
+```
+<template>
+  <div>
+    <v-card elevation="2" outlined class="my-4 card-container">
+      <v-card-text>
+        <h2 class="section-title">Меню</h2>
+        <div class="nav-links">
+          <!--<v-btn text @click="goParticipations" class="nav-btn">Participations</v-btn>
+          <v-btn text @click="goParticipants" class="nav-btn">Participants</v-btn>-->
+
+          <template v-if="authorized">
+            <v-btn text @click="goParticipations" class="nav-btn">Результаты</v-btn>
+            <v-btn text @click="goParticipants" class="nav-btn">Участники</v-btn>
+            <!--<v-btn text @click="goLogOut" class="nav-btn">Клубы</v-btn>-->
+            <v-btn text @click="goProfile" class="nav-btn">Профиль</v-btn>
+            <v-btn text @click="goLogOut" class="nav-btn">Выйти</v-btn>
+          </template>
+
+          <template v-else>
+            <v-btn text @click="goSignIn" class="nav-btn">Войти</v-btn>
+            <v-btn to="/show/signup" class="nav-btn">Регистрация</v-btn>
+          </template>
+        </div>
+      </v-card-text>
+    </v-card>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'HomePage', // Renamed component to multi-word
+
+  data: () => ({
+    authorized: false
+  }),
+
+  created () {
+    if (sessionStorage.getItem('auth_token')) {
+      if (sessionStorage.getItem('auth_token') !== '-1') {
+        this.authorized = true
+      }
+    }
+  },
+
+  methods: {
+    goParticipations() {
+      this.$router.push('/participation');
+    },
+
+    goParticipants() {
+      this.$router.push('/participants');
+    },
+
+    goProfile() {
+      this.$router.push({ name: 'profile' });
+    },
+
+    goLogOut() {
+      this.$router.push({ name: 'logout' });
+    },
+
+    goSignIn() {
+      this.$router.push({ name: 'signin' });
+    }
+  }
+}
+</script>
+
+<style scoped>
+.card-container {
+  max-width: 500px;
+  margin: 2rem auto;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #3f51b5;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.nav-btn {
+  text-decoration: none;
+  color: #283593;
+  font-weight: bold;
+  width: 100%;
+  max-width: 250px;
+}
+
+.nav-btn:hover {
+  background-color: #f1f1f1;
+  transition: background-color 0.3s ease;
+}
+</style>
+
+```
+###Страница со списком участников
+```
+<template>
+  <div class="participants-container">
+    <v-row>
+      <v-col cols="12" md="6">
+        <v-select
+          v-model="selectedBreed"
+          :items="breedOptions"
+          label="Фильтр по породе"
+          clearable
+          class="custom-select"
+        ></v-select>
+      </v-col>
+      <v-col cols="12" md="6">
+        <v-select
+          v-model="selectedClub"
+          :items="clubOptions"
+          label="Фильтр по клубу"
+          clearable
+          class="custom-select"
+        ></v-select>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col v-for="participant in filteredParticipants" :key="participant.id" cols="12" md="6" lg="4">
+        <v-card elevation="5" class="participant-card">
+          <v-card-title class="card-title">{{ participant.name }}</v-card-title>
+          <v-card-text>
+            <div class="info-item"><strong>Порода:</strong> {{ participant.breed }}</div>
+            <div class="info-item"><strong>Возраст:</strong> {{ participant.age }}</div>
+            <div class="info-item"><strong>Родословная:</strong> {{ participant.family }}</div>
+            <div class="info-item"><strong>Информация о владельце:</strong> {{ participant.owner_data }}</div>
+            <div class="info-item"><strong>Клуб:</strong> {{ participant.club }}</div>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn color="primary" class="edit-btn" @click="editParticipant(participant.id)">Редактировать</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+  </div>
+</template>
+
+<script>
+export default {
+  props: {
+    participants: {
+      type: Array,
+      required: true
+    }
+  },
+  data() {
+    return {
+      selectedBreed: null,
+      selectedClub: null
+    };
+  },
+  computed: {
+    breedOptions() {
+      return [...new Set(this.participants.map(p => p.breed))];
+    },
+    clubOptions() {
+      return [...new Set(this.participants.map(p => p.club))];
+    },
+    filteredParticipants() {
+      return this.participants.filter(p => {
+        const matchesBreed = this.selectedBreed ? p.breed === this.selectedBreed : true;
+        const matchesClub = this.selectedClub ? p.club === this.selectedClub : true;
+        return matchesBreed && matchesClub;
+      });
+    }
+  },
+  methods: {
+    editParticipant(participantId) {
+      this.$router.push({ name: 'Dog_edit', params: { dogId: participantId } });
+    }
+  }
+};
+</script>
+
+<style scoped>
+.participants-container {
+  padding: 24px;
+  background: #f0f4ff;
+  border-radius: 12px;
+}
+
+.custom-select {
+  max-width: 400px;
+  margin: 0 auto 16px;
+}
+
+.participant-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease-in-out;
+}
+
+.participant-card:hover {
+  transform: translateY(-5px);
+}
+
+.card-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1e3a8a;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.info-item {
+  font-size: 16px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+
+```
+### Страница с результатами 
+```
+<template>
+  <div class="participation-container">
+    <h2 class="title">Participation Details</h2>
+    <div class="card-grid">
+      <v-card v-for="participation in participations" :key="participation.id" elevation="3" class="small-card">
+        <v-card-text>
+          <p><strong>Medal:</strong> {{ participation.medal }}</p>
+          <p><strong>Vaccine:</strong> {{ participation.vaccinated }}</p>
+          <p><strong>Verified:</strong> {{ participation.dismissed }}</p>
+          <p><strong>Grade:</strong> {{ participation.final_grade }}</p>
+          <p><strong>Participant:</strong> {{ participation.participant}}</p>
+          <v-btn color="primary" class="edit-button" @click="goParticipationsEdit(participation.id)">Edit</v-btn>
+        </v-card-text>
+      </v-card>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  props: {
+    participations: {
+      type: Array,
+      required: true
+    }
+  },
+  methods:
+      {
+        goParticipationsEdit(dogId) {
+        this.$router.push({ name: "Participation_Edit", params: { dogId: dogId } });
+}
+
+
+  }
+}
+</script>
+
+<style scoped>
+.participation-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 2rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #3f51b5;
+  margin-bottom: 1rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  width: 100%;
+  max-width: 800px;
+}
+
+.small-card {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: #ffffff;
+  text-align: center;
+  position: relative;
+}
+
+p {
+  font-size: 0.9rem;
+  margin: 5px 0;
+}
+
+.edit-button {
+  margin-top: 10px;
+  width: 100%;
+}
+</style>
+
+```
+### Профиль
+```
+<template>
+  <div class="edit">
+    <h2 class="profile-title">Profile</h2>
+    <h3 class="welcome-message">Nice to see you, {{ login() }}!</h3>
+    <v-card class="profile-card">
+      <v-card-text class="profile-info">
+        <div class="text--primary">
+          <p><strong>First name:</strong> {{ first_name }}</p>
+          <p><strong>Last name:</strong> {{ last_name }}</p>
+          <p><strong>Telephone number:</strong> {{ tel }}</p>
+        </div>
+        <div class="profile-actions">
+          <v-btn @click="goRegister" class="profile-button primary">Зарегистрировать собаку</v-btn>
+          <v-btn @click="goGrade" class="profile-button secondary">Поставить оценку</v-btn>
+          <v-btn @click="goEdit" class="profile-button success">Редактировать профиль</v-btn>
+          <v-btn @click="goHome" class="profile-button error">На главную</v-btn>
+        </div>
+      </v-card-text>
+    </v-card>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'UserProfile',
+  data() {
+    return {
+      first_name: '',
+      last_name: '',
+      tel: '',
+    };
+  },
+  created() {
+    this.loadReaderData();
+  },
+  methods: {
+    async loadReaderData() {
+      try {
+        const response = await this.axios.get('http://127.0.0.1:8000/auth/users/me/', {
+          headers: {
+            Authorization: `Token ${sessionStorage.getItem('auth_token')}`
+          }
+        });
+        this.first_name = response.data.first_name;
+        this.last_name = response.data.last_name;
+        this.tel = response.data.tel;
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    },
+    goHome() {
+      this.$router.push({ name: 'home' });
+    },
+    goRegister() {
+      this.$router.push({ name: 'regdog' });
+    },
+    goEdit() {
+      this.$router.push({ name: 'profile_edit' });
+    },
+    goGrade() {
+      this.$router.push({ name: 'grading' });
+    },
+    login() {
+      return sessionStorage.getItem('username');
+    }
+  }
+};
+</script>
+
+<style scoped>
+.edit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 2rem;
+}
+
+.profile-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #3f51b5;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-message {
+  font-size: 1.5rem;
+  color: #607d8b;
+  margin-bottom: 2rem;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  padding: 2rem;
+  background-color: #ffffff;
+  text-align: center;
+}
+
+.profile-info p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #444;
+  margin: 8px 0;
+}
+
+.profile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+.profile-button {
+  width: 100%;
+  max-width: 400px;
+  padding: 10px;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.primary {
+  background-color: #3f51b5;
+  color: white;
+}
+
+.secondary {
+  background-color: #009688;
+  color: white;
+}
+
+.success {
+  background-color: #4caf50;
+  color: white;
+}
+
+.error {
+  background-color: #f44336;
+  color: white;
+}
+
+.profile-button:hover {
+  filter: brightness(1.2);
+}
+</style>
+
+```
+### Регистрация собаки
+```
+<template>
+   <div class="edit">
+    <h3>Dog registration</h3>
+      <v-form
+      @submit.prevent="signDogs"
+      ref="editForm"
+      class="my-2">
+      <v-row>
+        <v-col cols="5" class="mx-auto">
+
+          <v-text-field
+            label="Dog's name"
+            v-model="editForm.name"
+            name="name"/>
+
+          <v-select
+            v-model="editForm.breed"
+            :items="options"
+            name="breed"
+            label="Breed"
+          ></v-select>
+
+          <v-text-field
+            label="Age"
+            v-model="editForm.age"
+            name="age"
+            type="number"/>
+
+          <v-text-field
+            label="Pedigree"
+            v-model="editForm.family"
+            name="family"/>
+
+
+          <v-text-field
+            label="Owner info"
+            v-model="editForm.owner_data"
+            name="owner_data"/>
+
+            <v-btn type="submit" color="#283593" dark>Register the dog</v-btn>
+        </v-col>
+      </v-row>
+    </v-form>
+    <v-card>
+      <v-card-text style="margin-top:1cm">
+        <a @click.prevent="goProfile" style="text-decoration: none; color: #283593">Back</a>
+      </v-card-text>
+    </v-card>
+   </div>
+</template>
+
+<script>
+import $ from "jquery";
+export default {
+  name: 'DogRegister',
+  data: () => ({ 
+    editForm: {
+      //participant: Object,
+      name: '',
+      breed: '',
+      age: '',
+      family: '',
+      owner_data: '',
+      //club,
+
+    },
+
+    options: ['h', 'b', 't'],
+    //participants: 
+  }),
+    methods: {
+        async signDogs () {
+            console.log(1)
+        
+        $.ajax({
+                    type: "POST",
+                    data: {
+                            name: this.editForm.name,
+                            breed: this.editForm.breed,
+                            age: this.editForm.age,
+                            family: this.editForm.family,
+                            owner_data: this.editForm.owner_data
+                    },
+                    url: "http://127.0.0.1:8000/participants/"
+                }).done(function () {
+                    console.log(this.data)
+                    alert("Registration succeed")
+                    //this.$router.push({ name: 'participants' })
+                });
+        },
+        
+        goProfile () {
+        this.$router.push({ name: 'profile' })
+    },
+    }
+}
+
+</script>
+```
+### Выставление оценки
+```
+<template>
+  <div class="edit">
+    <h3>Grade</h3>
+    <v-form
+      @submit.prevent="signPart" 
+      ref="editFormPart"
+      class="my-2">
+      <v-row>
+        <v-col cols="5" class="mx-auto">
+          
+          <v-select
+            v-model="editFormPart.participant"
+            :items="participants"
+            item-text="name"
+            item-value="id"
+            name="participant"
+            label="Participant"
+          ></v-select>
+
+          <v-select
+            v-model="editFormPart.medal"
+            :items="medals"
+            name="medal"
+            label="Medal"
+          ></v-select>
+
+          <v-text-field
+            label="Date of vaccination"
+            v-model="editFormPart.vaccinated"
+            name="vaccinated"
+            type="date"/>
+
+          <v-checkbox
+            v-model="editFormPart.dismissed"
+            :label="'Dismissed'"
+          ></v-checkbox>
+
+
+          <v-text-field
+            label="Enter the grade"
+            v-model="editFormPart.final_grade"
+            type='number'
+            name="final_grade"/>
+
+            <v-btn type="submit" color="#283593" dark>Grade</v-btn>
+        </v-col>
+      </v-row>
+    </v-form>
+    <v-card>
+      <v-card-text style="margin-top:1cm">
+        <a @click.prevent="goProfile" style="text-decoration: none; color: #283593">Back</a>
+      </v-card-text>
+    </v-card>
+  </div>
+</template>
+
+<script>
+import $ from "jquery";
+const array1 = [];
+import axios from "axios";
+
+export default {
+  name: 'DogGrade',
+  data: () => ({
+
+    editFormPart: {
+      medal: "",
+      vaccinated: "",
+      dismissed: "",
+      final_grade: "",
+      participant: "",
+    },
+
+    medals: ['g', 's', 'b'],
+    participants: array1, 
+  }),
+    methods: {
+        
+        async signPart () {
+            console.log(1)
+        
+        $.ajax({
+                    type: "POST",
+                    data: {
+                            medal: this.editFormPart.medal,
+                            vaccinated: this.editFormPart.vaccinated,
+                            dismissed: this.editFormPart.dismissed,
+                            final_grade: this.editFormPart.final_grade,
+                            participant: this.editFormPart.participant,
+                    },
+                    url: "http://127.0.0.1:8000/participation/"
+                }).done(function () {
+                    console.log(this.data)
+                    alert("Done")
+                    //this.$router.push({ name: 'participants' })
+                });
+        },
+
+        goProfile () {
+        this.$router.push({ name: 'profile' })
+    }
+    },
+      beforeMount: function () {
+        this.$nextTick(async function () {
+            const response = await axios.get('http://127.0.0.1:8000/participants/?format=json')
+            for (let part of response.data) {
+                array1.push(part);
+      }
+    })
+  }
+        
+}
+
+
+</script>
+
+```
+### Изменение данных о собаке
+```
+<template>
+  <div class="edit-container">
+    <v-card class="edit-card">
+      <v-card-title>Edit Dog Information</v-card-title>
+      <v-card-text>
+        <v-form @submit.prevent="updateDog" ref="editForm">
+          <v-text-field label="Dog's Name" v-model="editForm.name" outlined dense />
+          <v-text-field label="Breed" v-model="editForm.breed" outlined dense />
+          <v-text-field label="Age" v-model="editForm.age" type="number" outlined dense />
+          <v-text-field label="Pedigree" v-model="editForm.family" outlined dense />
+          <v-text-field label="Owner Info" v-model="editForm.owner_data" outlined dense />
+
+          <v-btn color="primary" block class="mt-3" @click="updateDog">
+            <v-icon left>mdi-content-save</v-icon> Update Dog Info
+          </v-btn>
+        </v-form>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn text color="blue darken-2" class="back-link" @click="goParticipants">
+          <v-icon left>mdi-arrow-left</v-icon> Back
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </div>
+</template>
+
+<script>
+export default {
+  props: {
+    dogId: {
+      type: [String, Number],
+      required: true
+    }
+  },
+  data() {
+    return {
+      editForm: {
+        name: '',
+        breed: '',
+        age: '',
+        family: '',
+        owner_data: ''
+      }
+    };
+  },
+  mounted() {
+    console.log("Dog ID:", this.dogId);
+    this.loadDogData();
+  },
+  methods: {
+
+  goParticipants() {
+    this.$router.push({ path: "/participants" });
+  },
+
+
+    async loadDogData() {
+      try {
+        const response = await this.axios.get(`http://127.0.0.1:8000/participants/${this.dogId}`);
+        this.editForm = response.data;
+      } catch (error) {
+        console.error("Error loading dog data:", error);
+      }
+    },
+    async updateDog() {
+      try {
+        const response = await this.axios.patch(`http://127.0.0.1:8000/participants/${this.dogId}/`, this.editForm, {
+          headers: {
+            Authorization: `Token ${sessionStorage.getItem('auth_token')}`
+          }
+        });
+        console.log(response);
+        this.$router.push({ path: "/participants" });
+      } catch (e) {
+        console.error(e.response ? e.response.data : e.message);
+      }
+    }
+  }
+};
+</script>
+
+<style scoped>
+.edit-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.edit-card {
+  width: 400px;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.back-link {
+  text-transform: none;
+  font-weight: bold;
+}
+</style>
+
+```
+
+### Изменение профиля эксперта
+```
+<template>
+  <div class="edit">
+    <h2 class="edit-title">Edit the Profile</h2>
+    <v-form
+      @submit.prevent="saveChanges"
+      ref="changeForm"
+      class="form-container">
+      <v-row>
+        <v-col cols="12" md="6" class="mx-auto">
+          <v-text-field
+            label="First name"
+            v-model="changeForm.first_name"
+            name="first_name"
+            outlined
+            dense
+            class="input-field"/>
+
+          <v-text-field
+            label="Last name"
+            v-model="changeForm.last_name"
+            name="last_name"
+            outlined
+            dense
+            class="input-field"/>
+
+          <v-text-field
+            label="Telephone number"
+            v-model="changeForm.tel"
+            name="tel"
+            outlined
+            dense
+            class="input-field"/>
+
+          <v-btn type="submit" class="save-button" color="primary" dark>Save</v-btn>
+        </v-col>
+      </v-row>
+    </v-form>
+    <p class="back-link">
+      <router-link to="/show/profile" class="back-button">Back</router-link>
+    </p>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'ProfileEdit',
+
+  data: () => ({
+    reader_old: Object,
+    changeForm: {
+      first_name: '',
+      last_name: '',
+      tel: '',
+    },
+  }),
+
+  methods: {
+    async saveChanges () {
+      for (const [key, value] of Object.entries(this.changeForm)) {
+        if (value === '') {
+          delete this.changeForm[key]
+        }
+      }
+      try {
+        const response = await this.axios
+          .patch('http://127.0.0.1:8000/auth/users/me/',
+            this.changeForm, {
+              headers: {
+                Authorization: `Token ${sessionStorage.getItem('auth_token')}`
+              }
+              })
+        console.log(response)
+        this.$refs.changeForm.reset()
+        await this.$router.push({name: 'profile'})
+      } catch (e) {
+        console.error(e.message)
+      }
+    }
+  }
+}
+</script>
+
+<style scoped>
+.edit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 2rem;
+}
+
+.edit-title {
+  font-size: 2rem;
+  color: #3f51b5;
+  margin-bottom: 2rem;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 2rem;
+  background-color: #fff;
+}
+
+.input-field {
+  margin-bottom: 1.5rem;
+}
+
+.save-button {
+  width: 100%;
+  padding: 10px;
+  font-weight: bold;
+  border-radius: 8px;
+}
+
+.back-link {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.back-button {
+  text-decoration: none;
+  color: #283593;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.back-button:hover {
+  color: #1a237e;
+}
+</style>
+
+```
+
+
